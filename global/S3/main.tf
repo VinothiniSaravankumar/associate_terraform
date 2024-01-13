@@ -21,10 +21,10 @@ resource "aws_s3_bucket" "s3_bkt_4_statefile" {
   # prevent accidental deletion of this S3 bucket
   # commented the below lifecycle config and added force_destory to execute terraform destroy
   # For force_destroy to take effect, execute terraform_apply and then execute terraform destroy
-  lifecycle {
-    prevent_destroy = true
-  }
-# force_destroy = true
+  # lifecycle {
+  #   prevent_destroy = true
+  # }
+force_destroy = true
 }
 
 # enable versioning so that you can see the full revision history of your state files
