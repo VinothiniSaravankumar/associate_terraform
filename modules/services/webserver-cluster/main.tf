@@ -1,11 +1,20 @@
-terraform {
-   backend "s3" {
-    key = "stage/services/webserver-cluster/terraform.tfstate"
-    bucket = "statefilestore"
-    region = "us-east-2"
-    dynamodb_table = "s3_bkt_locks"
-    encrypt = true  
-   } 
+# terraform {
+#    backend "s3" {
+#     key = "stage/services/webserver-cluster/terraform.tfstate"
+#     bucket = "statefilestore"
+#     region = "us-east-2"
+#     dynamodb_table = "s3_bkt_locks"
+#     encrypt = true  
+#    } 
+
+# }
+
+locals {
+  http_port = 80
+  any_port = 0
+  any_protocol = "-1"
+  tcp_protocol = "tcp"
+  all_ips = ["0.0.0.0/0"]
 
 }
 
@@ -28,7 +37,7 @@ data "terraform_remote_state" "db" {
 
 resource "aws_launch_configuration" "example" {
   image_id           =  "ami-0fb653ca2d3203ac1" 
-  instance_type = "t2.micro"
+  instance_type = var.instance_type
   security_groups = [aws_security_group.instance.id]
 
   # user_data = <<-EOF
@@ -39,7 +48,7 @@ resource "aws_launch_configuration" "example" {
   #             nohup busybox httpd -f -p ${var.server_port} &
   #             EOF
 
-  user_data = templatefile("user-data.sh", {
+  user_data = templatefile("../../../modules/services/webserver-cluster/user-data.sh", {
     server_port = var.server_port
     db_address = data.terraform_remote_state.db.outputs.address
     db_port = data.terraform_remote_state.db.outputs.port
@@ -57,8 +66,8 @@ resource "aws_autoscaling_group" "example" {
   target_group_arns = [aws_lb_target_group.asg.arn]
   health_check_type = "ELB"
 
-  min_size = 2
-  max_size = 10
+  min_size = var.min_size
+  max_size = var.max_size
 
   tag {
     key                 = "Name"
@@ -83,10 +92,10 @@ resource "aws_security_group" "instance" {
   # name = "terraform-example-instance"
   name = "${var.cluster_name}-instance"
   ingress {
-    from_port   = var.server_port
-    to_port     = var.server_port
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port   = local.http_port
+    to_port     = local.http_port
+    protocol    = local.tcp_protocol
+    cidr_blocks = local.all_ips
   }
 }
 
@@ -100,7 +109,7 @@ resource "aws_lb" "example" {
 
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.example.arn
-  port              = 80
+  port              = local.http_port
   protocol          = "HTTP"
 
   # By default, return a simple 404 page
@@ -138,18 +147,18 @@ resource "aws_security_group" "alb" {
   name = "${var.cluster_name}-alb"
   # Allow inbound HTTP requests
   ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port   = local.http_port
+    to_port     = local.http_port
+    protocol    = local.any_protocol
+    cidr_blocks = local.all_ips
   }
 
   # Allow all outbound requests
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port   = local.any_port
+    to_port     = local.any_port
+    protocol    = local.any_protocol
+    cidr_blocks = local.all_ips
   }
 }
 
