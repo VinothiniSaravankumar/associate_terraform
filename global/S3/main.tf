@@ -1,7 +1,14 @@
 terraform {
-   backend "s3" {
-    key = "global/s3/terraform.tfstate"     
-   } 
+#    backend "s3" {
+#     key = "global/s3/terraform.tfstate"
+#     bucket = "statefilestore"
+# region = "us-east-2"
+# dynamodb_table = "s3_bkt_locks"
+# encrypt = true   
+#    } 
+backend "local" {
+  
+}
 
 }
 provider "aws" {
