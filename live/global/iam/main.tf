@@ -7,7 +7,12 @@ resource "aws_iam_user" "example" {
     name = "neo.${count.index}"
   
 }
-resource "aws_iam_user" "example2" {
+# resource "aws_iam_user" "example2" {
+#   count = length(var.user_names)
+#   name = var.user_names[count.index]
+# }
+module "users" {
+  source = "../../../modules/landing_zones"
   count = length(var.user_names)
-  name = var.user_names[count.index]
+  user_names = var.user_names[count.index]  
 }
